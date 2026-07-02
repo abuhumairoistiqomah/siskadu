@@ -380,6 +380,7 @@ export default function App() {
   const [loginId, setLoginId] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   // Local Database and config states
   const [complaints, setComplaints] = useState<Complaint[]>(() => {
@@ -388,7 +389,14 @@ export default function App() {
   });
 
   const [gasUrl, setGasUrl] = useState<string>(() => {
-    return localStorage.getItem('siskadu_gas_url') || 'https://script.google.com/macros/s/AKfycbzAhwycom_h0E8AtHeOM2v1jCATZRiK8sylZAcHb2mwf3BTwrNH8brT8jEOcXe4L7QC5w/exec';
+    const saved = localStorage.getItem('siskadu_gas_url');
+    const oldDefault = 'https://script.google.com/macros/s/AKfycbzAhwycom_h0E8AtHeOM2v1jCATZRiK8sylZAcHb2mwf3BTwrNH8brT8jEOcXe4L7QC5w/exec';
+    const newDefault = 'https://script.google.com/macros/s/AKfycbz55xOhfeFfwMzauCxd1_vkvOAU91rSZb07Vo99TUSYmgF5SFN9DDcKo54cBwRlVCWkww/exec';
+    
+    if (!saved || saved === oldDefault) {
+      return newDefault;
+    }
+    return saved;
   });
 
   // UI States
@@ -521,7 +529,35 @@ export default function App() {
 
   // Google Apps Script source code template for users to copy
   const appsScriptCode = `function doGet(e) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var isAccountRequest = (e.parameter && e.parameter.tab === "Akun") || (e.parameter && e.parameter.action === "accounts");
+  
+  if (isAccountRequest) {
+    var sheet = ss.getSheetByName("Akun");
+    if (!sheet) {
+      return ContentService.createTextOutput(JSON.stringify({
+        status: "error",
+        message: "Tab 'Akun' tidak ditemukan di Spreadsheet Anda."
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    var data = sheet.getDataRange().getValues();
+    var accounts = [];
+    // Kolom A: ID (index 0), Kolom B: Password (index 1)
+    for (var i = 1; i < data.length; i++) {
+      var idVal = data[i][0] ? data[i][0].toString().trim() : "";
+      var pwVal = data[i][1] ? data[i][1].toString().trim() : "";
+      if (idVal) {
+        accounts.push({ id: idVal, password: pwVal });
+      }
+    }
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "success",
+      type: "accounts",
+      data: accounts
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  var sheet = ss.getSheets()[0];
   var data = sheet.getDataRange().getValues();
   var headers = data[0];
   var jsonArray = [];
@@ -851,17 +887,72 @@ function doPost(e) {
     return Object.entries(counts).map(([name, count]) => ({ name, count }));
   }, [complaints]);
 
-  // Calculate weekly trend of reports based on received date (just grouping them)
+  // Calculate monthly trend of reports based on received date
   const trendStats = useMemo(() => {
-    const dates: { [key: string]: number } = {};
+    const groups: { [key: string]: { label: string; count: number; sortKey: string } } = {};
+    
     complaints.forEach(c => {
-      const dateStr = c.tanggalDiterima.split('/')[0] + '/' + (c.tanggalDiterima.split('/')[1] || '07');
-      dates[dateStr] = (dates[dateStr] || 0) + 1;
+      let label = 'Lainnya';
+      let sortKey = '0000-00';
+      
+      const dateStr = c.tanggalDiterima;
+      if (dateStr && dateStr !== '-') {
+        // Try split by '/' (DD/MM/YYYY)
+        const parts = dateStr.split('/');
+        if (parts.length === 3) {
+          const monthIdx = parseInt(parts[1], 10) - 1;
+          const year = parts[2].trim();
+          if (monthIdx >= 0 && monthIdx < 12) {
+            label = `${indonesianMonths[monthIdx]} ${year}`;
+            const mStr = (monthIdx + 1).toString().padStart(2, '0');
+            sortKey = `${year}-${mStr}`;
+          }
+        } else {
+          // Try split by '-' (YYYY-MM-DD or DD-MM-YYYY)
+          const dashParts = dateStr.split('-');
+          if (dashParts.length === 3) {
+            if (dashParts[0].length === 4) { // YYYY-MM-DD
+              const year = dashParts[0];
+              const monthIdx = parseInt(dashParts[1], 10) - 1;
+              if (monthIdx >= 0 && monthIdx < 12) {
+                label = `${indonesianMonths[monthIdx]} ${year}`;
+                const mStr = (monthIdx + 1).toString().padStart(2, '0');
+                sortKey = `${year}-${mStr}`;
+              }
+            } else { // DD-MM-YYYY
+              const monthIdx = parseInt(dashParts[1], 10) - 1;
+              const year = dashParts[2].split('T')[0];
+              if (monthIdx >= 0 && monthIdx < 12) {
+                label = `${indonesianMonths[monthIdx]} ${year}`;
+                const mStr = (monthIdx + 1).toString().padStart(2, '0');
+                sortKey = `${year}-${mStr}`;
+              }
+            }
+          } else {
+            // Try standard Date parsing as fallback
+            try {
+              const d = new Date(dateStr);
+              if (!isNaN(d.getTime())) {
+                label = `${indonesianMonths[d.getMonth()]} ${d.getFullYear()}`;
+                const mStr = (d.getMonth() + 1).toString().padStart(2, '0');
+                sortKey = `${d.getFullYear()}-${mStr}`;
+              }
+            } catch(e) {}
+          }
+        }
+      }
+      
+      if (!groups[sortKey]) {
+        groups[sortKey] = { label, count: 0, sortKey };
+      }
+      groups[sortKey].count += 1;
     });
-    // Sort keys chronologically
-    return Object.entries(dates)
-      .map(([date, count]) => ({ date, count }))
-      .slice(-7); // Keep last 7 dates
+
+    // Sort chronologically by sortKey
+    return Object.values(groups)
+      .sort((a, b) => a.sortKey.localeCompare(b.sortKey))
+      .map(g => ({ date: g.label, count: g.count }))
+      .slice(-7); // Keep last 7 months
   }, [complaints]);
 
   // Aggregated data for class analysis page
@@ -920,14 +1011,77 @@ function doPost(e) {
     }).sort((a, b) => b.count - a.count);
   }, [complaints]);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (loginId.trim() === 'manajemenaw10' && loginPassword === 'jakarta10.') {
-      setIsLoggedIn(true);
-      localStorage.setItem('siskadu_logged_in', 'true');
+    const idClean = loginId.trim();
+    const passwordClean = loginPassword;
+
+    if (!idClean || !passwordClean) {
+      setLoginError('Harap masukkan ID dan Password.');
+      return;
+    }
+
+    if (gasUrl) {
+      setIsLoggingIn(true);
       setLoginError('');
+      try {
+        // COR-safe: No custom headers are sent to completely prevent preflight OPTIONS requests, which often fail in Google Apps Script.
+        const response = await fetch(`${gasUrl}?action=accounts&_t=${Date.now()}`, {
+          method: 'GET',
+          mode: 'cors'
+        });
+        
+        const result = await response.json();
+        
+        // 1. Success: Accounts list was retrieved correctly
+        if (result && result.status === 'success' && result.type === 'accounts' && Array.isArray(result.data)) {
+          const match = result.data.find((acc: any) => {
+            return acc && acc.id && acc.password &&
+                   acc.id.toString().trim().toLowerCase() === idClean.toLowerCase() &&
+                   acc.password.toString().trim() === passwordClean;
+          });
+
+          if (match) {
+            setIsLoggedIn(true);
+            localStorage.setItem('siskadu_logged_in', 'true');
+            setLoginError('');
+            setIsLoggingIn(false);
+            return;
+          } else {
+            setLoginError('ID atau Password salah. (Divalidasi menggunakan data Google Sheets tab "Akun").');
+            setIsLoggingIn(false);
+            return;
+          }
+        } 
+        
+        // 2. Apps Script returned error (e.g. missing "Akun" sheet)
+        if (result && result.status === 'error') {
+          setLoginError(`Gagal Login: ${result.message || 'Terjadi kesalahan pada Google Sheets.'} (Pastikan tab bernama "Akun" sudah dibuat)`);
+          setIsLoggingIn(false);
+          return;
+        }
+
+        // 3. Old Apps Script is running (it returns success with the complaints list data but type is not "accounts")
+        const isOldScript = result && result.status === 'success' && result.type !== 'accounts';
+        if (isOldScript) {
+          setLoginError('Google Apps Script Anda terdeteksi menggunakan VERSI LAMA. Harap buka menu integrasi (ikon sheet hijau di kanan atas), salin kode Apps Script terbaru, dan lakukan "Deploy Ulang" (pilih New Deployment / Penerapan Baru) di Google Sheets agar tab "Akun" dapat dibaca.');
+          setIsLoggingIn(false);
+          return;
+        }
+
+        // 4. Fallback for any other unexpected response format
+        setLoginError('Gagal memproses data akun dari Google Sheets. Silakan pastikan Anda telah memasang Apps Script terbaru dan menyebarkannya.');
+        setIsLoggingIn(false);
+        return;
+
+      } catch (err) {
+        console.error("Login verification fetch error", err);
+        setLoginError('Koneksi gagal atau Spreadsheet tidak dapat diakses (CORS / Salah URL). Pastikan perangkat Anda terhubung ke internet untuk dapat melakukan login.');
+        setIsLoggingIn(false);
+        return;
+      }
     } else {
-      setLoginError('ID atau Password salah. Silakan coba lagi.');
+      setLoginError('Sistem belum terhubung ke Google Sheets. Silakan hubungkan Google Sheets terlebih dahulu.');
     }
   };
 
@@ -1056,10 +1210,20 @@ function doPost(e) {
 
             <button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl text-xs uppercase tracking-wider transition-all duration-150 cursor-pointer shadow-md flex items-center justify-center gap-2 mt-2"
+              disabled={isLoggingIn}
+              className={`w-full text-white font-bold py-3 px-4 rounded-xl text-xs uppercase tracking-wider transition-all duration-150 cursor-pointer shadow-md flex items-center justify-center gap-2 mt-2 ${isLoggingIn ? 'bg-slate-600 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
             >
-              <Lock className="w-3.5 h-3.5" />
-              Masuk ke Dashboard
+              {isLoggingIn ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  Memverifikasi Akun...
+                </>
+              ) : (
+                <>
+                  <Lock className="w-3.5 h-3.5" />
+                  Masuk ke Dashboard
+                </>
+              )}
             </button>
           </form>
 
@@ -1408,7 +1572,7 @@ function doPost(e) {
 
                 {/* Weekly Reporting Trend */}
                 <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-xs flex-1 flex flex-col">
-                  <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">Tren Tanggal Laporan</h3>
+                  <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">Tren Bulan Laporan</h3>
                   
                   <div className="flex-1 flex items-end justify-between gap-1.5 h-[100px] mt-2 px-1">
                     {trendStats.map((tr, idx) => {
@@ -2451,9 +2615,8 @@ function doPost(e) {
 
       {/* Bottom Status Bar Footer */}
       <footer id="app-footer" className="h-8 bg-slate-800 text-slate-400 flex items-center px-6 justify-between text-[10px] shrink-0 z-10">
-        <div className="flex gap-4">
-          <span>SUMBER DATA: <span className="text-white font-bold">{gasUrl ? 'Google Sheets Live' : 'Database Lokal'}</span></span>
-          <span className="hidden md:inline">SCRIPT: <span className="text-white font-mono">SISKADU_Apps_Script_v2.gs</span></span>
+        <div>
+          <span>SISKADU - Sistem Informasi Keluhan Terpadu v2.2</span>
         </div>
         <div>
           <span>Last Sync: {new Date().toLocaleDateString('id-ID')} | Sistem Aktif</span>
