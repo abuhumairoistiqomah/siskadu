@@ -193,7 +193,7 @@ const parseTimestamp = (ts: string, fallbackDate: string): number => {
 
 const defaultSortComplaints = (list: Complaint[]): Complaint[] => {
   return [...list].sort((a, b) => {
-    // 1. Status Priority Group: (on progress / open / baru) vs (selesai / resolved)
+    // 1. Status Priority Group: (on progress / open / baru) vs (selesai / resolved / solved)
     const getStatusGroup = (st: string): number => {
       const s = (st || '').toLowerCase();
       if (s === 'on progress' || s === 'diproses' || s === 'baru' || s === 'open') {
@@ -206,17 +206,10 @@ const defaultSortComplaints = (list: Complaint[]): Complaint[] => {
     const groupB = getStatusGroup(b.status);
 
     if (groupA !== groupB) {
-      return groupA - groupB; // 1 comes before 2
+      return groupA - groupB; // 1 (Active) comes before 2 (Resolved)
     }
 
-    // 2. Within the same group, prioritize by Date/Timestamp (Newest first)
-    const timeA = parseTimestamp(a.timestamp, a.tanggalDiterima);
-    const timeB = parseTimestamp(b.timestamp, b.tanggalDiterima);
-    if (timeA !== timeB) {
-      return timeB - timeA; // Newest first
-    }
-
-    // 3. Within the same date, prioritize by Urgensi: Tinggi > Sedang > Rendah
+    // 2. Within the same status group, prioritize by Urgensi (Tinggi/Urgent > Sedang > Rendah)
     const getUrgencyScore = (urg: string): number => {
       const u = (urg || '').toLowerCase();
       if (u === 'tinggi' || u === 'urgent') return 3;
@@ -225,9 +218,17 @@ const defaultSortComplaints = (list: Complaint[]): Complaint[] => {
       return 0;
     };
 
-    const urgA = getUrgencyScore(a.urgensi);
-    const urgB = getUrgencyScore(b.urgensi);
-    return urgB - urgA; // Highest first
+    const urgScoreA = getUrgencyScore(a.urgensi);
+    const urgScoreB = getUrgencyScore(b.urgensi);
+
+    if (urgScoreA !== urgScoreB) {
+      return urgScoreB - urgScoreA; // Higher score (e.g., Tinggi = 3) comes first
+    }
+
+    // 3. Within the same urgency score, prioritize by Date/Timestamp (Newest first)
+    const timeA = parseTimestamp(a.timestamp, a.tanggalDiterima);
+    const timeB = parseTimestamp(b.timestamp, b.tanggalDiterima);
+    return timeB - timeA; // Newest first
   });
 };
 
@@ -395,7 +396,7 @@ export default function App() {
   const [filterUrgensi, setFilterUrgensi] = useState('Semua');
   
   // Advanced 14-column filter states
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(true); // default true for better visibility in dedicated tab
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [filterTanggalDiterima, setFilterTanggalDiterima] = useState('Semua');
   const [filterMedia, setFilterMedia] = useState('Semua');
   const [filterNamaPelapor, setFilterNamaPelapor] = useState('');
