@@ -384,7 +384,7 @@ export default function App() {
   });
 
   const [gasUrl, setGasUrl] = useState<string>(() => {
-    return localStorage.getItem('siskadu_gas_url') || '';
+    return localStorage.getItem('siskadu_gas_url') || 'https://script.google.com/macros/s/AKfycbzAhwycom_h0E8AtHeOM2v1jCATZRiK8sylZAcHb2mwf3BTwrNH8brT8jEOcXe4L7QC5w/exec';
   });
 
   // UI States
