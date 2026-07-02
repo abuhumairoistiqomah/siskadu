@@ -21,6 +21,9 @@ import {
   Clock, 
   AlertTriangle, 
   User, 
+  Users,
+  BookOpen,
+  Target,
   Calendar, 
   Filter, 
   Info, 
@@ -389,7 +392,11 @@ export default function App() {
   });
 
   // UI States
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'historis'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'historis' | 'analisis_kelas' | 'analisis_tema' | 'analisis_target' | 'analisis_siswa'>('dashboard');
+  const [selectedAnalysisClass, setSelectedAnalysisClass] = useState<string | null>(null);
+  const [selectedAnalysisTema, setSelectedAnalysisTema] = useState<string | null>(null);
+  const [selectedAnalysisTarget, setSelectedAnalysisTarget] = useState<string | null>(null);
+  const [selectedAnalysisSiswa, setSelectedAnalysisSiswa] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterTema, setFilterTema] = useState('Semua');
   const [filterStatus, setFilterStatus] = useState('Semua');
@@ -857,6 +864,62 @@ function doPost(e) {
       .slice(-7); // Keep last 7 dates
   }, [complaints]);
 
+  // Aggregated data for class analysis page
+  const classAnalysisStats = useMemo(() => {
+    const counts: { [key: string]: number } = {};
+    complaints.forEach(c => {
+      const key = c.kelas || 'Tanpa Kelas';
+      counts[key] = (counts[key] || 0) + 1;
+    });
+    const total = complaints.length || 1;
+    return Object.entries(counts).map(([name, count]) => {
+      const percentage = Math.round((count / total) * 100);
+      return { name, count, percentage };
+    }).sort((a, b) => b.count - a.count);
+  }, [complaints]);
+
+  // Aggregated data for theme analysis page
+  const temaAnalysisStats = useMemo(() => {
+    const counts: { [key: string]: number } = {};
+    complaints.forEach(c => {
+      const key = c.tema || 'Tanpa Tema';
+      counts[key] = (counts[key] || 0) + 1;
+    });
+    const total = complaints.length || 1;
+    return Object.entries(counts).map(([name, count]) => {
+      const percentage = Math.round((count / total) * 100);
+      return { name, count, percentage };
+    }).sort((a, b) => b.count - a.count);
+  }, [complaints]);
+
+  // Aggregated data for target analysis page
+  const targetAnalysisStats = useMemo(() => {
+    const counts: { [key: string]: number } = {};
+    complaints.forEach(c => {
+      const key = c.target || 'Tanpa Target';
+      counts[key] = (counts[key] || 0) + 1;
+    });
+    const total = complaints.length || 1;
+    return Object.entries(counts).map(([name, count]) => {
+      const percentage = Math.round((count / total) * 100);
+      return { name, count, percentage };
+    }).sort((a, b) => b.count - a.count);
+  }, [complaints]);
+
+  // Aggregated data for student analysis page
+  const siswaAnalysisStats = useMemo(() => {
+    const counts: { [key: string]: number } = {};
+    complaints.forEach(c => {
+      const key = c.namaSiswa || 'Tanpa Nama Siswa';
+      counts[key] = (counts[key] || 0) + 1;
+    });
+    const total = complaints.length || 1;
+    return Object.entries(counts).map(([name, count]) => {
+      const percentage = Math.round((count / total) * 100);
+      return { name, count, percentage };
+    }).sort((a, b) => b.count - a.count);
+  }, [complaints]);
+
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (loginId.trim() === 'manajemenaw10' && loginPassword === 'jakarta10.') {
@@ -1067,8 +1130,8 @@ function doPost(e) {
       </header>
 
       {/* Navigation Sub-header */}
-      <div id="sub-header-nav" className="bg-slate-800 text-white flex items-center px-6 shrink-0 h-11 border-b border-slate-700 justify-between z-10">
-        <div className="flex gap-1 h-full items-end">
+      <div id="sub-header-nav" className="bg-slate-800 text-white flex items-center px-6 shrink-0 h-11 border-b border-slate-700 justify-between z-10 overflow-x-auto scrollbar-none">
+        <div className="flex gap-1 h-full items-end min-w-max">
           <button
             onClick={() => setActiveTab('dashboard')}
             className={`px-4 h-full flex items-center gap-2 text-xs font-bold transition-all border-b-2 cursor-pointer ${
@@ -1090,6 +1153,50 @@ function doPost(e) {
           >
             <Clock className="w-4 h-4" />
             Historis Pengaduan & Filter ({complaints.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('analisis_kelas')}
+            className={`px-4 h-full flex items-center gap-2 text-xs font-bold transition-all border-b-2 cursor-pointer ${
+              activeTab === 'analisis_kelas'
+                ? 'border-blue-400 text-blue-400 bg-slate-700/50'
+                : 'border-transparent text-slate-300 hover:text-white hover:bg-slate-700/30'
+            }`}
+          >
+            <Users className="w-4 h-4 text-emerald-400" />
+            Analisis Kelas
+          </button>
+          <button
+            onClick={() => setActiveTab('analisis_tema')}
+            className={`px-4 h-full flex items-center gap-2 text-xs font-bold transition-all border-b-2 cursor-pointer ${
+              activeTab === 'analisis_tema'
+                ? 'border-blue-400 text-blue-400 bg-slate-700/50'
+                : 'border-transparent text-slate-300 hover:text-white hover:bg-slate-700/30'
+            }`}
+          >
+            <BookOpen className="w-4 h-4 text-purple-400" />
+            Analisis Tema
+          </button>
+          <button
+            onClick={() => setActiveTab('analisis_target')}
+            className={`px-4 h-full flex items-center gap-2 text-xs font-bold transition-all border-b-2 cursor-pointer ${
+              activeTab === 'analisis_target'
+                ? 'border-blue-400 text-blue-400 bg-slate-700/50'
+                : 'border-transparent text-slate-300 hover:text-white hover:bg-slate-700/30'
+            }`}
+          >
+            <Target className="w-4 h-4 text-rose-400" />
+            Analisis Target
+          </button>
+          <button
+            onClick={() => setActiveTab('analisis_siswa')}
+            className={`px-4 h-full flex items-center gap-2 text-xs font-bold transition-all border-b-2 cursor-pointer ${
+              activeTab === 'analisis_siswa'
+                ? 'border-blue-400 text-blue-400 bg-slate-700/50'
+                : 'border-transparent text-slate-300 hover:text-white hover:bg-slate-700/30'
+            }`}
+          >
+            <User className="w-4 h-4 text-amber-400" />
+            Analisis Siswa
           </button>
         </div>
         
@@ -1334,7 +1441,7 @@ function doPost(e) {
 
             </div>
           </>
-        ) : (
+        ) : activeTab === 'historis' ? (
           /* HISTORIS PENGADUAN VIEW (Contains filters and full historical table list) */
           <div className="flex-1 bg-white rounded-lg border border-slate-200 shadow-xs flex flex-col min-h-0 overflow-hidden">
             
@@ -1858,7 +1965,487 @@ function doPost(e) {
             </div>
 
           </div>
-        )}
+        ) : activeTab === 'analisis_kelas' ? (
+          <div className="flex-1 flex flex-col lg:flex-row gap-5 min-h-0 overflow-hidden">
+            {/* Left: Diagram */}
+            <div className="flex-1 lg:max-w-md bg-white rounded-xl border border-slate-200 shadow-xs flex flex-col min-h-0 overflow-hidden">
+              <div className="p-4 border-b border-slate-100 bg-slate-50">
+                <h3 className="font-bold text-slate-800 text-xs md:text-sm flex items-center gap-2">
+                  <Users className="w-4 h-4 text-emerald-600" />
+                  Grafik Keluhan per Kelas
+                </h3>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Klik pada baris kelas untuk menyaring daftar keluhan di sebelah kanan.
+                </p>
+              </div>
+              <div className="flex-1 p-4 overflow-y-auto space-y-2">
+                <button
+                  onClick={() => setSelectedAnalysisClass(null)}
+                  className={`w-full text-left p-2.5 rounded-lg text-xs font-bold transition-all border flex items-center justify-between cursor-pointer ${
+                    selectedAnalysisClass === null
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-800 shadow-xs'
+                      : 'border-slate-100 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  <span>Semua Kelas</span>
+                  <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full text-[10px] font-extrabold">{complaints.length}</span>
+                </button>
+                
+                <div className="space-y-2.5 pt-2">
+                  {classAnalysisStats.map((item, idx) => {
+                    const maxCount = Math.max(...classAnalysisStats.map(c => c.count)) || 1;
+                    const barWidth = Math.max(5, (item.count / maxCount) * 100);
+                    const isSelected = selectedAnalysisClass === item.name;
+                    return (
+                      <div 
+                        key={idx}
+                        onClick={() => setSelectedAnalysisClass(item.name)}
+                        className={`p-3 rounded-lg border transition-all cursor-pointer group ${
+                          isSelected 
+                            ? 'bg-emerald-50/50 border-emerald-300 shadow-sm' 
+                            : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50/30'
+                        }`}
+                      >
+                        <div className="flex justify-between items-center text-xs font-bold mb-1.5">
+                          <span className="text-slate-700 group-hover:text-emerald-700 transition-colors">{item.name}</span>
+                          <span className="text-slate-500 font-extrabold">{item.count} Keluhan ({item.percentage}%)</span>
+                        </div>
+                        <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full rounded-full transition-all duration-500 ${
+                              isSelected ? 'bg-emerald-600' : 'bg-emerald-500 group-hover:bg-emerald-600'
+                            }`}
+                            style={{ width: `${barWidth}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Right: List */}
+            <div className="flex-1 bg-white rounded-xl border border-slate-200 shadow-xs flex flex-col min-h-0 overflow-hidden">
+              <div className="p-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-slate-800 text-xs md:text-sm flex items-center gap-2">
+                    <Database className="w-4 h-4 text-blue-600" />
+                    Daftar Keluhan {selectedAnalysisClass ? `Kelas: ${selectedAnalysisClass}` : '(Semua Kelas)'}
+                  </h3>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Menampilkan {
+                      complaints.filter(c => !selectedAnalysisClass || (c.kelas || 'Tanpa Kelas') === selectedAnalysisClass).length
+                    } keluhan.
+                  </p>
+                </div>
+                {selectedAnalysisClass && (
+                  <button 
+                    onClick={() => setSelectedAnalysisClass(null)}
+                    className="text-xs text-emerald-600 hover:text-emerald-700 font-bold bg-emerald-50 px-2.5 py-1 rounded-md transition-colors border border-emerald-200 cursor-pointer"
+                  >
+                    Reset Filter
+                  </button>
+                )}
+              </div>
+              <div className="flex-1 p-4 overflow-y-auto space-y-3">
+                {defaultSortComplaints(
+                  complaints.filter(c => !selectedAnalysisClass || (c.kelas || 'Tanpa Kelas') === selectedAnalysisClass)
+                ).map((comp, idx) => (
+                    <div 
+                      key={idx}
+                      onClick={() => handleSelectComplaint(comp)}
+                      className="p-4 rounded-xl border border-slate-100 hover:border-slate-200 hover:bg-slate-50/50 transition-all cursor-pointer flex flex-col sm:flex-row sm:items-start justify-between gap-3 shadow-xs"
+                    >
+                      <div className="space-y-1.5 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-bold">{formatToIndonesianDate(comp.tanggalDiterima)}</span>
+                          <span className={`px-2 py-0.5 rounded text-[9px] font-bold border ${getUrgencyStyles(comp.urgensi)}`}>{comp.urgensi}</span>
+                          <span className="text-xs font-bold text-blue-600">{comp.tema}</span>
+                        </div>
+                        <p className="text-sm font-bold text-slate-800">{comp.namaSiswa} <span className="text-slate-400 font-semibold text-xs">({comp.kelas})</span></p>
+                        <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">{comp.isi}</p>
+                        <div className="text-[10px] text-slate-400 font-medium">
+                          Pelapor: {comp.namaPelapor} • Target: <span className="font-semibold text-slate-600">{comp.target} ({comp.namaTarget})</span>
+                        </div>
+                      </div>
+                      <div className="flex sm:flex-col items-end justify-between sm:justify-start gap-2 shrink-0">
+                        <span className="flex items-center gap-1.5 text-xs">
+                          <span className={`w-2 h-2 rounded-full ${getStatusDot(comp.status)}`}></span>
+                          <span className="font-bold text-slate-700">{comp.status}</span>
+                        </span>
+                        {comp.pic && comp.pic !== '-' && (
+                          <span className="text-[10px] bg-blue-50 text-blue-700 font-semibold px-2 py-0.5 rounded">
+                            PIC: {comp.pic}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          </div>
+        ) : activeTab === 'analisis_tema' ? (
+          <div className="flex-1 flex flex-col lg:flex-row gap-5 min-h-0 overflow-hidden">
+            {/* Left: Diagram */}
+            <div className="flex-1 lg:max-w-md bg-white rounded-xl border border-slate-200 shadow-xs flex flex-col min-h-0 overflow-hidden">
+              <div className="p-4 border-b border-slate-100 bg-slate-50">
+                <h3 className="font-bold text-slate-800 text-xs md:text-sm flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-purple-600" />
+                  Grafik Keluhan per Tema
+                </h3>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Klik pada baris tema untuk menyaring daftar keluhan di sebelah kanan.
+                </p>
+              </div>
+              <div className="flex-1 p-4 overflow-y-auto space-y-2">
+                <button
+                  onClick={() => setSelectedAnalysisTema(null)}
+                  className={`w-full text-left p-2.5 rounded-lg text-xs font-bold transition-all border flex items-center justify-between cursor-pointer ${
+                    selectedAnalysisTema === null
+                      ? 'bg-purple-50 border-purple-200 text-purple-800 shadow-xs'
+                      : 'border-slate-100 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  <span>Semua Tema</span>
+                  <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full text-[10px] font-extrabold">{complaints.length}</span>
+                </button>
+                
+                <div className="space-y-2.5 pt-2">
+                  {temaAnalysisStats.map((item, idx) => {
+                    const maxCount = Math.max(...temaAnalysisStats.map(c => c.count)) || 1;
+                    const barWidth = Math.max(5, (item.count / maxCount) * 100);
+                    const isSelected = selectedAnalysisTema === item.name;
+                    return (
+                      <div 
+                        key={idx}
+                        onClick={() => setSelectedAnalysisTema(item.name)}
+                        className={`p-3 rounded-lg border transition-all cursor-pointer group ${
+                          isSelected 
+                            ? 'bg-purple-50/50 border-purple-300 shadow-sm' 
+                            : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50/30'
+                        }`}
+                      >
+                        <div className="flex justify-between items-center text-xs font-bold mb-1.5">
+                          <span className="text-slate-700 group-hover:text-purple-700 transition-colors">{item.name}</span>
+                          <span className="text-slate-500 font-extrabold">{item.count} Keluhan ({item.percentage}%)</span>
+                        </div>
+                        <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full rounded-full transition-all duration-500 ${
+                              isSelected ? 'bg-purple-600' : 'bg-purple-500 group-hover:bg-purple-600'
+                            }`}
+                            style={{ width: `${barWidth}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Right: List */}
+            <div className="flex-1 bg-white rounded-xl border border-slate-200 shadow-xs flex flex-col min-h-0 overflow-hidden">
+              <div className="p-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-slate-800 text-xs md:text-sm flex items-center gap-2">
+                    <Database className="w-4 h-4 text-blue-600" />
+                    Daftar Keluhan {selectedAnalysisTema ? `Tema: ${selectedAnalysisTema}` : '(Semua Tema)'}
+                  </h3>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Menampilkan {
+                      complaints.filter(c => !selectedAnalysisTema || (c.tema || 'Tanpa Tema') === selectedAnalysisTema).length
+                    } keluhan.
+                  </p>
+                </div>
+                {selectedAnalysisTema && (
+                  <button 
+                    onClick={() => setSelectedAnalysisTema(null)}
+                    className="text-xs text-purple-600 hover:text-purple-700 font-bold bg-purple-50 px-2.5 py-1 rounded-md transition-colors border border-purple-200 cursor-pointer"
+                  >
+                    Reset Filter
+                  </button>
+                )}
+              </div>
+              <div className="flex-1 p-4 overflow-y-auto space-y-3">
+                {defaultSortComplaints(
+                  complaints.filter(c => !selectedAnalysisTema || (c.tema || 'Tanpa Tema') === selectedAnalysisTema)
+                ).map((comp, idx) => (
+                    <div 
+                      key={idx}
+                      onClick={() => handleSelectComplaint(comp)}
+                      className="p-4 rounded-xl border border-slate-100 hover:border-slate-200 hover:bg-slate-50/50 transition-all cursor-pointer flex flex-col sm:flex-row sm:items-start justify-between gap-3 shadow-xs"
+                    >
+                      <div className="space-y-1.5 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-bold">{formatToIndonesianDate(comp.tanggalDiterima)}</span>
+                          <span className={`px-2 py-0.5 rounded text-[9px] font-bold border ${getUrgencyStyles(comp.urgensi)}`}>{comp.urgensi}</span>
+                          <span className="text-xs font-bold text-purple-600">{comp.tema}</span>
+                        </div>
+                        <p className="text-sm font-bold text-slate-800">{comp.namaSiswa} <span className="text-slate-400 font-semibold text-xs">({comp.kelas})</span></p>
+                        <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">{comp.isi}</p>
+                        <div className="text-[10px] text-slate-400 font-medium">
+                          Pelapor: {comp.namaPelapor} • Target: <span className="font-semibold text-slate-600">{comp.target} ({comp.namaTarget})</span>
+                        </div>
+                      </div>
+                      <div className="flex sm:flex-col items-end justify-between sm:justify-start gap-2 shrink-0">
+                        <span className="flex items-center gap-1.5 text-xs">
+                          <span className={`w-2 h-2 rounded-full ${getStatusDot(comp.status)}`}></span>
+                          <span className="font-bold text-slate-700">{comp.status}</span>
+                        </span>
+                        {comp.pic && comp.pic !== '-' && (
+                          <span className="text-[10px] bg-blue-50 text-blue-700 font-semibold px-2 py-0.5 rounded">
+                            PIC: {comp.pic}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          </div>
+        ) : activeTab === 'analisis_target' ? (
+          <div className="flex-1 flex flex-col lg:flex-row gap-5 min-h-0 overflow-hidden">
+            {/* Left: Diagram */}
+            <div className="flex-1 lg:max-w-md bg-white rounded-xl border border-slate-200 shadow-xs flex flex-col min-h-0 overflow-hidden">
+              <div className="p-4 border-b border-slate-100 bg-slate-50">
+                <h3 className="font-bold text-slate-800 text-xs md:text-sm flex items-center gap-2">
+                  <Target className="w-4 h-4 text-rose-600" />
+                  Grafik Keluhan per Target
+                </h3>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Klik pada baris target untuk menyaring daftar keluhan di sebelah kanan.
+                </p>
+              </div>
+              <div className="flex-1 p-4 overflow-y-auto space-y-2">
+                <button
+                  onClick={() => setSelectedAnalysisTarget(null)}
+                  className={`w-full text-left p-2.5 rounded-lg text-xs font-bold transition-all border flex items-center justify-between cursor-pointer ${
+                    selectedAnalysisTarget === null
+                      ? 'bg-rose-50 border-rose-200 text-rose-800 shadow-xs'
+                      : 'border-slate-100 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  <span>Semua Target</span>
+                  <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full text-[10px] font-extrabold">{complaints.length}</span>
+                </button>
+                
+                <div className="space-y-2.5 pt-2">
+                  {targetAnalysisStats.map((item, idx) => {
+                    const maxCount = Math.max(...targetAnalysisStats.map(c => c.count)) || 1;
+                    const barWidth = Math.max(5, (item.count / maxCount) * 100);
+                    const isSelected = selectedAnalysisTarget === item.name;
+                    return (
+                      <div 
+                        key={idx}
+                        onClick={() => setSelectedAnalysisTarget(item.name)}
+                        className={`p-3 rounded-lg border transition-all cursor-pointer group ${
+                          isSelected 
+                            ? 'bg-rose-50/50 border-rose-300 shadow-sm' 
+                            : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50/30'
+                        }`}
+                      >
+                        <div className="flex justify-between items-center text-xs font-bold mb-1.5">
+                          <span className="text-slate-700 group-hover:text-rose-700 transition-colors">{item.name}</span>
+                          <span className="text-slate-500 font-extrabold">{item.count} Keluhan ({item.percentage}%)</span>
+                        </div>
+                        <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full rounded-full transition-all duration-500 ${
+                              isSelected ? 'bg-rose-600' : 'bg-rose-500 group-hover:bg-rose-600'
+                            }`}
+                            style={{ width: `${barWidth}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Right: List */}
+            <div className="flex-1 bg-white rounded-xl border border-slate-200 shadow-xs flex flex-col min-h-0 overflow-hidden">
+              <div className="p-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-slate-800 text-xs md:text-sm flex items-center gap-2">
+                    <Database className="w-4 h-4 text-blue-600" />
+                    Daftar Keluhan {selectedAnalysisTarget ? `Target: ${selectedAnalysisTarget}` : '(Semua Target)'}
+                  </h3>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Menampilkan {
+                      complaints.filter(c => !selectedAnalysisTarget || (c.target || 'Tanpa Target') === selectedAnalysisTarget).length
+                    } keluhan.
+                  </p>
+                </div>
+                {selectedAnalysisTarget && (
+                  <button 
+                    onClick={() => setSelectedAnalysisTarget(null)}
+                    className="text-xs text-rose-600 hover:text-rose-700 font-bold bg-rose-50 px-2.5 py-1 rounded-md transition-colors border border-rose-200 cursor-pointer"
+                  >
+                    Reset Filter
+                  </button>
+                )}
+              </div>
+              <div className="flex-1 p-4 overflow-y-auto space-y-3">
+                {defaultSortComplaints(
+                  complaints.filter(c => !selectedAnalysisTarget || (c.target || 'Tanpa Target') === selectedAnalysisTarget)
+                ).map((comp, idx) => (
+                    <div 
+                      key={idx}
+                      onClick={() => handleSelectComplaint(comp)}
+                      className="p-4 rounded-xl border border-slate-100 hover:border-slate-200 hover:bg-slate-50/50 transition-all cursor-pointer flex flex-col sm:flex-row sm:items-start justify-between gap-3 shadow-xs"
+                    >
+                      <div className="space-y-1.5 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-bold">{formatToIndonesianDate(comp.tanggalDiterima)}</span>
+                          <span className={`px-2 py-0.5 rounded text-[9px] font-bold border ${getUrgencyStyles(comp.urgensi)}`}>{comp.urgensi}</span>
+                          <span className="text-xs font-bold text-rose-600">{comp.tema}</span>
+                        </div>
+                        <p className="text-sm font-bold text-slate-800">{comp.namaSiswa} <span className="text-slate-400 font-semibold text-xs">({comp.kelas})</span></p>
+                        <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">{comp.isi}</p>
+                        <div className="text-[10px] text-slate-400 font-medium">
+                          Pelapor: {comp.namaPelapor} • Target: <span className="font-semibold text-slate-600">{comp.target} ({comp.namaTarget})</span>
+                        </div>
+                      </div>
+                      <div className="flex sm:flex-col items-end justify-between sm:justify-start gap-2 shrink-0">
+                        <span className="flex items-center gap-1.5 text-xs">
+                          <span className={`w-2 h-2 rounded-full ${getStatusDot(comp.status)}`}></span>
+                          <span className="font-bold text-slate-700">{comp.status}</span>
+                        </span>
+                        {comp.pic && comp.pic !== '-' && (
+                          <span className="text-[10px] bg-blue-50 text-blue-700 font-semibold px-2 py-0.5 rounded">
+                            PIC: {comp.pic}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          </div>
+        ) : activeTab === 'analisis_siswa' ? (
+          <div className="flex-1 flex flex-col lg:flex-row gap-5 min-h-0 overflow-hidden">
+            {/* Left: Diagram */}
+            <div className="flex-1 lg:max-w-md bg-white rounded-xl border border-slate-200 shadow-xs flex flex-col min-h-0 overflow-hidden">
+              <div className="p-4 border-b border-slate-100 bg-slate-50">
+                <h3 className="font-bold text-slate-800 text-xs md:text-sm flex items-center gap-2">
+                  <User className="w-4 h-4 text-amber-600" />
+                  Grafik Keluhan per Siswa
+                </h3>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Klik pada nama siswa untuk menyaring daftar keluhan di sebelah kanan.
+                </p>
+              </div>
+              <div className="flex-1 p-4 overflow-y-auto space-y-2">
+                <button
+                  onClick={() => setSelectedAnalysisSiswa(null)}
+                  className={`w-full text-left p-2.5 rounded-lg text-xs font-bold transition-all border flex items-center justify-between cursor-pointer ${
+                    selectedAnalysisSiswa === null
+                      ? 'bg-amber-50 border-amber-200 text-amber-800 shadow-xs'
+                      : 'border-slate-100 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  <span>Semua Siswa</span>
+                  <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full text-[10px] font-extrabold">{complaints.length}</span>
+                </button>
+                
+                <div className="space-y-2.5 pt-2">
+                  {siswaAnalysisStats.map((item, idx) => {
+                    const maxCount = Math.max(...siswaAnalysisStats.map(c => c.count)) || 1;
+                    const barWidth = Math.max(5, (item.count / maxCount) * 100);
+                    const isSelected = selectedAnalysisSiswa === item.name;
+                    return (
+                      <div 
+                        key={idx}
+                        onClick={() => setSelectedAnalysisSiswa(item.name)}
+                        className={`p-3 rounded-lg border transition-all cursor-pointer group ${
+                          isSelected 
+                            ? 'bg-amber-50/50 border-amber-300 shadow-sm' 
+                            : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50/30'
+                        }`}
+                      >
+                        <div className="flex justify-between items-center text-xs font-bold mb-1.5">
+                          <span className="text-slate-700 group-hover:text-amber-700 transition-colors">{item.name}</span>
+                          <span className="text-slate-500 font-extrabold">{item.count} Keluhan ({item.percentage}%)</span>
+                        </div>
+                        <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full rounded-full transition-all duration-500 ${
+                              isSelected ? 'bg-amber-600' : 'bg-amber-500 group-hover:bg-amber-600'
+                            }`}
+                            style={{ width: `${barWidth}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Right: List */}
+            <div className="flex-1 bg-white rounded-xl border border-slate-200 shadow-xs flex flex-col min-h-0 overflow-hidden">
+              <div className="p-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-slate-800 text-xs md:text-sm flex items-center gap-2">
+                    <Database className="w-4 h-4 text-blue-600" />
+                    Daftar Keluhan {selectedAnalysisSiswa ? `Siswa: ${selectedAnalysisSiswa}` : '(Semua Siswa)'}
+                  </h3>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Menampilkan {
+                      complaints.filter(c => !selectedAnalysisSiswa || (c.namaSiswa || 'Tanpa Nama Siswa') === selectedAnalysisSiswa).length
+                    } keluhan.
+                  </p>
+                </div>
+                {selectedAnalysisSiswa && (
+                  <button 
+                    onClick={() => setSelectedAnalysisSiswa(null)}
+                    className="text-xs text-amber-600 hover:text-amber-700 font-bold bg-amber-50 px-2.5 py-1 rounded-md transition-colors border border-amber-200 cursor-pointer"
+                  >
+                    Reset Filter
+                  </button>
+                )}
+              </div>
+              <div className="flex-1 p-4 overflow-y-auto space-y-3">
+                {defaultSortComplaints(
+                  complaints.filter(c => !selectedAnalysisSiswa || (c.namaSiswa || 'Tanpa Nama Siswa') === selectedAnalysisSiswa)
+                ).map((comp, idx) => (
+                    <div 
+                      key={idx}
+                      onClick={() => handleSelectComplaint(comp)}
+                      className="p-4 rounded-xl border border-slate-100 hover:border-slate-200 hover:bg-slate-50/50 transition-all cursor-pointer flex flex-col sm:flex-row sm:items-start justify-between gap-3 shadow-xs"
+                    >
+                      <div className="space-y-1.5 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-bold">{formatToIndonesianDate(comp.tanggalDiterima)}</span>
+                          <span className={`px-2 py-0.5 rounded text-[9px] font-bold border ${getUrgencyStyles(comp.urgensi)}`}>{comp.urgensi}</span>
+                          <span className="text-xs font-bold text-amber-600">{comp.tema}</span>
+                        </div>
+                        <p className="text-sm font-bold text-slate-800">{comp.namaSiswa} <span className="text-slate-400 font-semibold text-xs">({comp.kelas})</span></p>
+                        <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">{comp.isi}</p>
+                        <div className="text-[10px] text-slate-400 font-medium">
+                          Pelapor: {comp.namaPelapor} • Target: <span className="font-semibold text-slate-600">{comp.target} ({comp.namaTarget})</span>
+                        </div>
+                      </div>
+                      <div className="flex sm:flex-col items-end justify-between sm:justify-start gap-2 shrink-0">
+                        <span className="flex items-center gap-1.5 text-xs">
+                          <span className={`w-2 h-2 rounded-full ${getStatusDot(comp.status)}`}></span>
+                          <span className="font-bold text-slate-700">{comp.status}</span>
+                        </span>
+                        {comp.pic && comp.pic !== '-' && (
+                          <span className="text-[10px] bg-blue-50 text-blue-700 font-semibold px-2 py-0.5 rounded">
+                            PIC: {comp.pic}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          </div>
+        ) : null}
 
       </main>
 
