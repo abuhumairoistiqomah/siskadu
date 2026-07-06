@@ -1574,16 +1574,17 @@ function doPost(e) {
                 <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-xs flex-1 flex flex-col">
                   <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">Tren Bulan Laporan</h3>
                   
-                  <div className="flex-1 flex items-end justify-between gap-1.5 h-[100px] mt-2 px-1">
+                  <div className="flex-1 flex items-end justify-between gap-1.5 h-[110px] mt-2 px-1">
                     {trendStats.map((tr, idx) => {
                       const maxCount = Math.max(...trendStats.map(t => t.count)) || 1;
                       const pct = Math.max(10, Math.round((tr.count / maxCount) * 100));
                       return (
                         <div key={idx} className="flex-1 flex flex-col items-center gap-1 group relative">
-                          <div className="absolute bottom-full mb-1 bg-slate-800 text-white text-[9px] font-bold px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 pointer-events-none">
-                            {tr.count} Laporan
-                          </div>
-                          <div className="w-full bg-slate-100 rounded-t-sm h-16 flex items-end justify-center">
+                          {/* Static number clearly visible above the bar */}
+                          <span className="text-[10px] font-black text-blue-600 transition-colors group-hover:text-blue-800">
+                            {tr.count}
+                          </span>
+                          <div className="w-full bg-slate-100 rounded-t-sm h-14 flex items-end justify-center">
                             <div 
                               className="bg-blue-600 rounded-t-sm w-full transition-all duration-500 hover:bg-blue-700" 
                               style={{ height: `${pct}%` }}
