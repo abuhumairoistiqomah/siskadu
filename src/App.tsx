@@ -820,6 +820,10 @@ function doPost(e) {
           valA = (a.status || '').toLowerCase();
           valB = (b.status || '').toLowerCase();
           break;
+        case 'tindakan':
+          valA = (a.tindakan || '').toLowerCase();
+          valB = (b.tindakan || '').toLowerCase();
+          break;
         default:
           break;
       }
@@ -1871,12 +1875,12 @@ function doPost(e) {
                     </select>
                   </div>
 
-                  {/* Tindakan Diambil */}
+                  {/* Tindakan Realisasi Masalah */}
                   <div className="col-span-1 md:col-span-2">
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Tindakan Diambil</label>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Tindakan Realisasi Masalah</label>
                     <input
                       type="text"
-                      placeholder="Cari kata kunci tindakan..."
+                      placeholder="Cari kata kunci tindakan realisasi..."
                       value={filterTindakan}
                       onChange={(e) => setFilterTindakan(e.target.value)}
                       className="w-full bg-white border border-slate-200 rounded p-1 text-[11px] text-slate-700 placeholder-slate-400 focus:outline-hidden"
@@ -2026,6 +2030,19 @@ function doPost(e) {
                       </div>
                     </th>
                     <th 
+                      onClick={() => handleSort('tindakan')}
+                      className="px-4 py-3 font-semibold cursor-pointer hover:bg-slate-100 transition-colors group"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span>TINDAKAN REALISASI MASALAH</span>
+                        {sortField === 'tindakan' ? (
+                          sortOrder === 'asc' ? <ChevronUp className="w-4 h-4 text-blue-600" /> : <ChevronDown className="w-4 h-4 text-blue-600" />
+                        ) : (
+                          <ArrowUpDown className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-400" />
+                        )}
+                      </div>
+                    </th>
+                    <th 
                       onClick={() => handleSort('status')}
                       className="px-4 py-3 font-semibold cursor-pointer hover:bg-slate-100 transition-colors group"
                     >
@@ -2043,7 +2060,7 @@ function doPost(e) {
                 <tbody className="divide-y divide-slate-100">
                   {filteredAndSortedComplaints.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="px-4 py-12 text-center text-slate-400">
+                      <td colSpan={10} className="px-4 py-12 text-center text-slate-400">
                         <div className="flex flex-col items-center justify-center gap-2">
                           <AlertCircle className="w-8 h-8 text-slate-300" />
                           <p className="font-semibold text-slate-500 text-xs">Tidak ada data pengaduan ditemukan</p>
@@ -2107,6 +2124,13 @@ function doPost(e) {
                         {/* PIC */}
                         <td className="px-4 py-3 text-slate-600 font-medium">
                           {comp.pic || '-'}
+                        </td>
+
+                        {/* Tindakan Realisasi Masalah */}
+                        <td className="px-4 py-3 max-w-[200px] truncate" title={comp.tindakan}>
+                          <p className="text-slate-600 truncate italic">
+                            {comp.tindakan || '-'}
+                          </p>
                         </td>
 
                         {/* Status */}
