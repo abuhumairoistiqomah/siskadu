@@ -235,6 +235,13 @@ const defaultSortComplaints = (list: Complaint[]): Complaint[] => {
   });
 };
 
+const cleanTargetName = (name: string): string => {
+  if (!name) return '-';
+  // Strip "Sekolah - ", "Sekolah-", "Guru - ", "Guru-", etc. prefix (case-insensitive)
+  let cleaned = name.replace(/^(Sekolah\s*[-:]\s*|Guru\s*[-:]\s*|Siswa\s*[-:]\s*|Kantin\s*[-:]\s*)/i, '');
+  return cleaned.trim() || name;
+};
+
 // Initial default database matching the user's provided screenshot and 6 additional high-fidelity cases
 const DEFAULT_COMPLAINTS: Complaint[] = [
   {
@@ -484,7 +491,7 @@ export default function App() {
           kelas: row["Kelas"] || row["kelas"] || "",
           tema: row["Tema Pelaporan"] || row["tema"] || "Fasilitas Sekolah",
           target: row["Target yang Dilaporkan"] || row["target"] || "Sekolah",
-          namaTarget: row["Nama Target yang Dilaporkan"] || row["namaTarget"] || "",
+          namaTarget: row["Nama Pihak yang Dilaporkan"] || row["Nama Target yang Dilaporkan"] || row["namaTarget"] || "",
           isi: row["Isi Laporan"] || row["isi"] || "",
           urgensi: row["Tingkat Urgensi"] || row["urgensi"] || "Sedang",
           bukti: row["Upload bukti pengaduan"] || row["bukti"] || "-",
@@ -1494,7 +1501,9 @@ function doPost(e) {
                             </td>
                             <td className="px-4 py-3">
                               <p className="font-medium text-slate-700 truncate max-w-[150px]">{comp.tema}</p>
-                              <p className="text-[9px] text-slate-400">{comp.target}: <span className="font-semibold">{comp.namaTarget}</span></p>
+                              <p className="text-[9px] text-slate-500 font-bold truncate" title={comp.namaTarget || comp.target}>
+                                {cleanTargetName(comp.namaTarget || comp.target)}
+                              </p>
                             </td>
                             <td className="px-4 py-3 text-center">
                               <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border ${getUrgencyStyles(comp.urgensi)}`}>
@@ -2102,8 +2111,8 @@ function doPost(e) {
                         {/* Tema & Target */}
                         <td className="px-4 py-3 max-w-[140px] truncate">
                           <p className="font-medium text-slate-700 truncate">{comp.tema}</p>
-                          <p className="text-[10px] text-slate-400 truncate">
-                            {comp.target}: <span className="font-bold text-slate-600">{comp.namaTarget}</span>
+                          <p className="text-[10px] text-slate-500 font-bold truncate" title={comp.namaTarget || comp.target}>
+                            {cleanTargetName(comp.namaTarget || comp.target)}
                           </p>
                         </td>
 
@@ -2255,7 +2264,7 @@ function doPost(e) {
                         <p className="text-sm font-bold text-slate-800">{comp.namaSiswa} <span className="text-slate-400 font-semibold text-xs">({comp.kelas})</span></p>
                         <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">{comp.isi}</p>
                         <div className="text-[10px] text-slate-400 font-medium">
-                          Pelapor: {comp.namaPelapor} • Target: <span className="font-semibold text-slate-600">{comp.target} ({comp.namaTarget})</span>
+                          Pelapor: {comp.namaPelapor} • Target: <span className="font-bold text-slate-600">{cleanTargetName(comp.namaTarget || comp.target)}</span>
                         </div>
                       </div>
                       <div className="flex sm:flex-col items-end justify-between sm:justify-start gap-2 shrink-0">
@@ -2375,7 +2384,7 @@ function doPost(e) {
                         <p className="text-sm font-bold text-slate-800">{comp.namaSiswa} <span className="text-slate-400 font-semibold text-xs">({comp.kelas})</span></p>
                         <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">{comp.isi}</p>
                         <div className="text-[10px] text-slate-400 font-medium">
-                          Pelapor: {comp.namaPelapor} • Target: <span className="font-semibold text-slate-600">{comp.target} ({comp.namaTarget})</span>
+                          Pelapor: {comp.namaPelapor} • Target: <span className="font-bold text-slate-600">{cleanTargetName(comp.namaTarget || comp.target)}</span>
                         </div>
                       </div>
                       <div className="flex sm:flex-col items-end justify-between sm:justify-start gap-2 shrink-0">
@@ -2495,7 +2504,7 @@ function doPost(e) {
                         <p className="text-sm font-bold text-slate-800">{comp.namaSiswa} <span className="text-slate-400 font-semibold text-xs">({comp.kelas})</span></p>
                         <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">{comp.isi}</p>
                         <div className="text-[10px] text-slate-400 font-medium">
-                          Pelapor: {comp.namaPelapor} • Target: <span className="font-semibold text-slate-600">{comp.target} ({comp.namaTarget})</span>
+                          Pelapor: {comp.namaPelapor} • Target: <span className="font-bold text-slate-600">{cleanTargetName(comp.namaTarget || comp.target)}</span>
                         </div>
                       </div>
                       <div className="flex sm:flex-col items-end justify-between sm:justify-start gap-2 shrink-0">
@@ -2615,7 +2624,7 @@ function doPost(e) {
                         <p className="text-sm font-bold text-slate-800">{comp.namaSiswa} <span className="text-slate-400 font-semibold text-xs">({comp.kelas})</span></p>
                         <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">{comp.isi}</p>
                         <div className="text-[10px] text-slate-400 font-medium">
-                          Pelapor: {comp.namaPelapor} • Target: <span className="font-semibold text-slate-600">{comp.target} ({comp.namaTarget})</span>
+                          Pelapor: {comp.namaPelapor} • Target: <span className="font-bold text-slate-600">{cleanTargetName(comp.namaTarget || comp.target)}</span>
                         </div>
                       </div>
                       <div className="flex sm:flex-col items-end justify-between sm:justify-start gap-2 shrink-0">
@@ -2703,7 +2712,7 @@ function doPost(e) {
                 </div>
                 <div>
                   <p className="text-[10px] text-slate-400 uppercase font-semibold">Target yang Dilaporkan</p>
-                  <p className="font-semibold text-slate-700">{selectedComplaint.target} - <span className="font-bold text-blue-700">{selectedComplaint.namaTarget}</span></p>
+                  <p className="font-bold text-blue-700 text-sm">{cleanTargetName(selectedComplaint.namaTarget || selectedComplaint.target)}</p>
                 </div>
               </div>
 
