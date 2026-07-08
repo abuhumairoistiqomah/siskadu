@@ -998,7 +998,7 @@ function doPost(e) {
   const targetAnalysisStats = useMemo(() => {
     const counts: { [key: string]: number } = {};
     complaints.forEach(c => {
-      const key = c.target || 'Tanpa Target';
+      const key = cleanTargetName(c.namaTarget || c.target);
       counts[key] = (counts[key] || 0) + 1;
     });
     const total = complaints.length || 1;
@@ -2473,7 +2473,7 @@ function doPost(e) {
                   </h3>
                   <p className="text-[11px] text-slate-500 mt-1">
                     Menampilkan {
-                      complaints.filter(c => !selectedAnalysisTarget || (c.target || 'Tanpa Target') === selectedAnalysisTarget).length
+                      complaints.filter(c => !selectedAnalysisTarget || cleanTargetName(c.namaTarget || c.target) === selectedAnalysisTarget).length
                     } keluhan.
                   </p>
                 </div>
@@ -2488,7 +2488,7 @@ function doPost(e) {
               </div>
               <div className="flex-1 p-4 overflow-y-auto space-y-3">
                 {defaultSortComplaints(
-                  complaints.filter(c => !selectedAnalysisTarget || (c.target || 'Tanpa Target') === selectedAnalysisTarget)
+                  complaints.filter(c => !selectedAnalysisTarget || cleanTargetName(c.namaTarget || c.target) === selectedAnalysisTarget)
                 ).map((comp, idx) => (
                     <div 
                       key={idx}
