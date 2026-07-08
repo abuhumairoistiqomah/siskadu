@@ -38,7 +38,10 @@ import {
   ChevronUp,
   ChevronDown,
   Lock,
-  LogOut
+  LogOut,
+  UserCheck,
+  Menu,
+  LayoutDashboard
 } from 'lucide-react';
 
 // Interfaces for our Complaint schema matching the spreadsheet headers exactly
@@ -407,11 +410,14 @@ export default function App() {
   });
 
   // UI States
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'historis' | 'analisis_kelas' | 'analisis_tema' | 'analisis_target' | 'analisis_siswa'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'historis' | 'analisis_kelas' | 'analisis_tema' | 'analisis_target' | 'analisis_siswa' | 'analisis_pic'>('dashboard');
   const [selectedAnalysisClass, setSelectedAnalysisClass] = useState<string | null>(null);
   const [selectedAnalysisTema, setSelectedAnalysisTema] = useState<string | null>(null);
   const [selectedAnalysisTarget, setSelectedAnalysisTarget] = useState<string | null>(null);
   const [selectedAnalysisSiswa, setSelectedAnalysisSiswa] = useState<string | null>(null);
+  const [selectedAnalysisPic, setSelectedAnalysisPic] = useState<string | null>(null);
+  const [isAnalysisDropdownOpen, setIsAnalysisDropdownOpen] = useState(false);
+  const [isMobileFeaturesOpen, setIsMobileFeaturesOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterTema, setFilterTema] = useState('Semua');
   const [filterStatus, setFilterStatus] = useState('Semua');
@@ -1022,6 +1028,20 @@ function doPost(e) {
     }).sort((a, b) => b.count - a.count);
   }, [complaints]);
 
+  // Aggregated data for PIC analysis page
+  const picAnalysisStats = useMemo(() => {
+    const counts: { [key: string]: number } = {};
+    complaints.forEach(c => {
+      const key = c.pic && c.pic !== '-' ? c.pic : 'Belum Ditentukan';
+      counts[key] = (counts[key] || 0) + 1;
+    });
+    const total = complaints.length || 1;
+    return Object.entries(counts).map(([name, count]) => {
+      const percentage = Math.round((count / total) * 100);
+      return { name, count, percentage };
+    }).sort((a, b) => b.count - a.count);
+  }, [complaints]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     const idClean = loginId.trim();
@@ -1268,17 +1288,17 @@ function doPost(e) {
           <button 
             id="connection-badge-btn"
             onClick={() => setIsSetupOpen(true)}
-            className={`flex items-center gap-2 px-3 py-1 rounded-full border text-xs font-semibold cursor-pointer transition-colors ${
+            className={`flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1 rounded-full border text-xs font-semibold cursor-pointer transition-colors ${
               gasUrl 
                 ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' 
-                : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
+                : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
             }`}
           >
-            <div className={`w-2 h-2 rounded-full animate-pulse ${gasUrl ? 'bg-emerald-500' : 'bg-amber-500'}`}></div>
-            <span className="text-[10px] md:text-xs">
+            <div className={`w-2.5 h-2.5 rounded-full animate-pulse ${gasUrl ? 'bg-emerald-500' : 'bg-rose-500'}`} title={gasUrl ? 'Live: Google Sheets' : 'Offline: Local Database'}></div>
+            <span className="text-[10px] md:text-xs hidden md:inline">
               {gasUrl ? 'Live: Google Sheets' : 'Offline: Local Database'}
             </span>
-            <HelpCircle className="w-3.5 h-3.5 text-slate-400" />
+            <HelpCircle className="w-3.5 h-3.5 text-slate-400 hidden md:inline" />
           </button>
 
           {/* Quick Setup Trigger */}
@@ -1305,8 +1325,160 @@ function doPost(e) {
       </header>
 
       {/* Navigation Sub-header */}
-      <div id="sub-header-nav" className="bg-slate-800 text-white flex items-center px-6 shrink-0 h-11 border-b border-slate-700 justify-between z-10 overflow-x-auto scrollbar-none">
-        <div className="flex gap-1 h-full items-end min-w-max">
+      <div id="sub-header-nav" className="bg-slate-800 text-white flex items-center px-4 md:px-6 shrink-0 h-11 border-b border-slate-700 justify-between z-20 overflow-visible">
+        
+        {/* Mobile View: Features Dropdown + Logout */}
+        <div className="flex md:hidden items-center justify-between gap-3 w-full">
+          <div className="relative flex-1">
+            <button
+              onClick={() => setIsMobileFeaturesOpen(!isMobileFeaturesOpen)}
+              className="w-full bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded-md flex items-center justify-between text-xs font-bold transition-all border border-slate-600 cursor-pointer"
+            >
+              <span className="flex items-center gap-1.5 truncate">
+                <Menu className="w-3.5 h-3.5 text-indigo-400" />
+                <span className="truncate">
+                  Features: {
+                    activeTab === 'dashboard' ? 'Dashboard' :
+                    activeTab === 'historis' ? 'Historis & Filter' :
+                    activeTab === 'analisis_kelas' ? 'Analisis Kelas' :
+                    activeTab === 'analisis_tema' ? 'Analisis Tema' :
+                    activeTab === 'analisis_target' ? 'Analisis Target' :
+                    activeTab === 'analisis_siswa' ? 'Analisis Siswa' :
+                    activeTab === 'analisis_pic' ? 'Analisis PIC' : 'Menu'
+                  }
+                </span>
+              </span>
+              <ChevronDown className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${isMobileFeaturesOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {isMobileFeaturesOpen && (
+              <>
+                <div 
+                  className="fixed inset-0 z-40 cursor-default" 
+                  onClick={() => setIsMobileFeaturesOpen(false)}
+                />
+                <div className="absolute top-[100%] left-0 right-0 mt-1 bg-slate-900 border border-slate-700 rounded-lg shadow-xl py-1 z-50 animate-in fade-in slide-in-from-top-1 duration-150 max-h-80 overflow-y-auto">
+                  <button
+                    onClick={() => {
+                      setActiveTab('dashboard');
+                      setIsMobileFeaturesOpen(false);
+                    }}
+                    className={`w-full px-4 py-2 flex items-center gap-2 text-xs font-bold text-left transition-colors cursor-pointer ${
+                      activeTab === 'dashboard'
+                        ? 'bg-slate-800 text-blue-400 border-l-2 border-blue-400'
+                        : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                    }`}
+                  >
+                    <LayoutDashboard className="w-4 h-4 text-sky-400" />
+                    <span>Dashboard Pemantauan</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveTab('historis');
+                      setIsMobileFeaturesOpen(false);
+                    }}
+                    className={`w-full px-4 py-2 flex items-center gap-2 text-xs font-bold text-left transition-colors cursor-pointer ${
+                      activeTab === 'historis'
+                        ? 'bg-slate-800 text-blue-400 border-l-2 border-blue-400'
+                        : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                    }`}
+                  >
+                    <Clock className="w-4 h-4 text-emerald-400" />
+                    <span>Historis Pengaduan ({complaints.length})</span>
+                  </button>
+
+                  <div className="border-t border-slate-800 my-1"></div>
+                  <div className="px-4 py-1 text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">
+                    Analisis Detail
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setActiveTab('analisis_kelas');
+                      setIsMobileFeaturesOpen(false);
+                    }}
+                    className={`w-full px-4 py-2 flex items-center gap-2 text-xs font-bold text-left transition-colors cursor-pointer pl-6 ${
+                      activeTab === 'analisis_kelas'
+                        ? 'bg-slate-800 text-blue-400 border-l-2 border-blue-400'
+                        : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                    }`}
+                  >
+                    <Users className="w-4 h-4 text-emerald-400" />
+                    <span>Analisis Kelas</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveTab('analisis_tema');
+                      setIsMobileFeaturesOpen(false);
+                    }}
+                    className={`w-full px-4 py-2 flex items-center gap-2 text-xs font-bold text-left transition-colors cursor-pointer pl-6 ${
+                      activeTab === 'analisis_tema'
+                        ? 'bg-slate-800 text-blue-400 border-l-2 border-blue-400'
+                        : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                    }`}
+                  >
+                    <BookOpen className="w-4 h-4 text-purple-400" />
+                    <span>Analisis Tema</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveTab('analisis_target');
+                      setIsMobileFeaturesOpen(false);
+                    }}
+                    className={`w-full px-4 py-2 flex items-center gap-2 text-xs font-bold text-left transition-colors cursor-pointer pl-6 ${
+                      activeTab === 'analisis_target'
+                        ? 'bg-slate-800 text-blue-400 border-l-2 border-blue-400'
+                        : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                    }`}
+                  >
+                    <Target className="w-4 h-4 text-rose-400" />
+                    <span>Analisis Target</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveTab('analisis_siswa');
+                      setIsMobileFeaturesOpen(false);
+                    }}
+                    className={`w-full px-4 py-2 flex items-center gap-2 text-xs font-bold text-left transition-colors cursor-pointer pl-6 ${
+                      activeTab === 'analisis_siswa'
+                        ? 'bg-slate-800 text-blue-400 border-l-2 border-blue-400'
+                        : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                    }`}
+                  >
+                    <User className="w-4 h-4 text-amber-400" />
+                    <span>Analisis Siswa</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveTab('analisis_pic');
+                      setIsMobileFeaturesOpen(false);
+                    }}
+                    className={`w-full px-4 py-2 flex items-center gap-2 text-xs font-bold text-left transition-colors cursor-pointer pl-6 ${
+                      activeTab === 'analisis_pic'
+                        ? 'bg-slate-800 text-blue-400 border-l-2 border-blue-400'
+                        : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                    }`}
+                  >
+                    <UserCheck className="w-4 h-4 text-cyan-400" />
+                    <span>Analisis PIC</span>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
+          <button
+            onClick={handleLogout}
+            className="flex items-center justify-center gap-1 px-2.5 py-1.5 bg-red-600/20 hover:bg-red-600/30 text-red-300 hover:text-red-200 text-xs font-bold rounded-md transition-colors border border-red-500/20 cursor-pointer shrink-0"
+            title="Keluar dari Sistem"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Keluar</span>
+          </button>
+        </div>
+
+        {/* Desktop View: Full horizontal navigation & dropdown */}
+        <div className="hidden md:flex gap-1 h-full items-end min-w-max">
           <button
             onClick={() => setActiveTab('dashboard')}
             className={`px-4 h-full flex items-center gap-2 text-xs font-bold transition-all border-b-2 cursor-pointer ${
@@ -1329,66 +1501,127 @@ function doPost(e) {
             <Clock className="w-4 h-4" />
             Historis Pengaduan & Filter ({complaints.length})
           </button>
-          <button
-            onClick={() => setActiveTab('analisis_kelas')}
-            className={`px-4 h-full flex items-center gap-2 text-xs font-bold transition-all border-b-2 cursor-pointer ${
-              activeTab === 'analisis_kelas'
-                ? 'border-blue-400 text-blue-400 bg-slate-700/50'
-                : 'border-transparent text-slate-300 hover:text-white hover:bg-slate-700/30'
-            }`}
-          >
-            <Users className="w-4 h-4 text-emerald-400" />
-            Analisis Kelas
-          </button>
-          <button
-            onClick={() => setActiveTab('analisis_tema')}
-            className={`px-4 h-full flex items-center gap-2 text-xs font-bold transition-all border-b-2 cursor-pointer ${
-              activeTab === 'analisis_tema'
-                ? 'border-blue-400 text-blue-400 bg-slate-700/50'
-                : 'border-transparent text-slate-300 hover:text-white hover:bg-slate-700/30'
-            }`}
-          >
-            <BookOpen className="w-4 h-4 text-purple-400" />
-            Analisis Tema
-          </button>
-          <button
-            onClick={() => setActiveTab('analisis_target')}
-            className={`px-4 h-full flex items-center gap-2 text-xs font-bold transition-all border-b-2 cursor-pointer ${
-              activeTab === 'analisis_target'
-                ? 'border-blue-400 text-blue-400 bg-slate-700/50'
-                : 'border-transparent text-slate-300 hover:text-white hover:bg-slate-700/30'
-            }`}
-          >
-            <Target className="w-4 h-4 text-rose-400" />
-            Analisis Target
-          </button>
-          <button
-            onClick={() => setActiveTab('analisis_siswa')}
-            className={`px-4 h-full flex items-center gap-2 text-xs font-bold transition-all border-b-2 cursor-pointer ${
-              activeTab === 'analisis_siswa'
-                ? 'border-blue-400 text-blue-400 bg-slate-700/50'
-                : 'border-transparent text-slate-300 hover:text-white hover:bg-slate-700/30'
-            }`}
-          >
-            <User className="w-4 h-4 text-amber-400" />
-            Analisis Siswa
-          </button>
-        </div>
-        
-        <div className="flex items-center gap-4">
-          <div className="text-[10px] text-slate-400 hidden lg:block">
-            Sistem Informasi Sekolah Terintegrasi (Google Form & Sheet)
-          </div>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-1.5 px-3 py-1 bg-red-600/20 hover:bg-red-600/30 text-red-300 hover:text-red-200 text-[11px] font-bold rounded-md transition-colors border border-red-500/20 cursor-pointer"
-            title="Keluar dari Sistem"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            <span>Keluar</span>
-          </button>
-        </div>
-      </div>
+          {/* Dropdown Halaman Analisis */}
+          <div className="relative h-full flex items-center">
+            <button
+              onClick={() => setIsAnalysisDropdownOpen(!isAnalysisDropdownOpen)}
+              className={`px-4 h-full flex items-center gap-2 text-xs font-bold transition-all border-b-2 cursor-pointer ${
+                ['analisis_kelas', 'analisis_tema', 'analisis_target', 'analisis_siswa', 'analisis_pic'].includes(activeTab)
+                  ? 'border-blue-400 text-blue-400 bg-slate-700/50'
+                  : 'border-transparent text-slate-300 hover:text-white hover:bg-slate-700/30'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <BarChart2 className="w-4 h-4 text-indigo-400" />
+                <span>
+                  {activeTab === 'analisis_kelas' && 'Analisis Kelas'}
+                  {activeTab === 'analisis_tema' && 'Analisis Tema'}
+                  {activeTab === 'analisis_target' && 'Analisis Target'}
+                  {activeTab === 'analisis_siswa' && 'Analisis Siswa'}
+                  {activeTab === 'analisis_pic' && 'Analisis PIC'}
+                  {!['analisis_kelas', 'analisis_tema', 'analisis_target', 'analisis_siswa', 'analisis_pic'].includes(activeTab) && 'Halaman Analisis'}
+                </span>
+              </span>
+              <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isAnalysisDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+ 
+             {isAnalysisDropdownOpen && (
+               <>
+                 <div 
+                   className="fixed inset-0 z-40 cursor-default" 
+                   onClick={() => setIsAnalysisDropdownOpen(false)}
+                 />
+                 <div className="absolute top-[100%] left-0 mt-1 w-52 bg-slate-900 border border-slate-700 rounded-lg shadow-xl py-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+                   <button
+                     onClick={() => {
+                       setActiveTab('analisis_kelas');
+                       setIsAnalysisDropdownOpen(false);
+                     }}
+                     className={`w-full px-4 py-2.5 flex items-center gap-3 text-xs font-bold text-left transition-colors cursor-pointer ${
+                       activeTab === 'analisis_kelas'
+                         ? 'bg-slate-800 text-blue-400 border-l-2 border-blue-400'
+                         : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                     }`}
+                   >
+                     <Users className="w-4 h-4 text-emerald-400" />
+                     <span>Analisis Kelas</span>
+                   </button>
+                   <button
+                     onClick={() => {
+                       setActiveTab('analisis_tema');
+                       setIsAnalysisDropdownOpen(false);
+                     }}
+                     className={`w-full px-4 py-2.5 flex items-center gap-3 text-xs font-bold text-left transition-colors cursor-pointer ${
+                       activeTab === 'analisis_tema'
+                         ? 'bg-slate-800 text-blue-400 border-l-2 border-blue-400'
+                         : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                     }`}
+                   >
+                     <BookOpen className="w-4 h-4 text-purple-400" />
+                     <span>Analisis Tema</span>
+                   </button>
+                   <button
+                     onClick={() => {
+                       setActiveTab('analisis_target');
+                       setIsAnalysisDropdownOpen(false);
+                     }}
+                     className={`w-full px-4 py-2.5 flex items-center gap-3 text-xs font-bold text-left transition-colors cursor-pointer ${
+                       activeTab === 'analisis_target'
+                         ? 'bg-slate-800 text-blue-400 border-l-2 border-blue-400'
+                         : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                     }`}
+                   >
+                     <Target className="w-4 h-4 text-rose-400" />
+                     <span>Analisis Target</span>
+                   </button>
+                   <button
+                     onClick={() => {
+                       setActiveTab('analisis_siswa');
+                       setIsAnalysisDropdownOpen(false);
+                     }}
+                     className={`w-full px-4 py-2.5 flex items-center gap-3 text-xs font-bold text-left transition-colors cursor-pointer ${
+                       activeTab === 'analisis_siswa'
+                         ? 'bg-slate-800 text-blue-400 border-l-2 border-blue-400'
+                         : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                     }`}
+                   >
+                     <User className="w-4 h-4 text-amber-400" />
+                     <span>Analisis Siswa</span>
+                   </button>
+                   <button
+                     onClick={() => {
+                       setActiveTab('analisis_pic');
+                       setIsAnalysisDropdownOpen(false);
+                     }}
+                     className={`w-full px-4 py-2.5 flex items-center gap-3 text-xs font-bold text-left transition-colors cursor-pointer ${
+                       activeTab === 'analisis_pic'
+                         ? 'bg-slate-800 text-blue-400 border-l-2 border-blue-400'
+                         : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                     }`}
+                   >
+                     <UserCheck className="w-4 h-4 text-cyan-400" />
+                     <span>Analisis PIC</span>
+                   </button>
+                 </div>
+               </>
+             )}
+           </div>
+         </div>
+         
+         <div className="hidden md:flex items-center justify-end gap-4">
+           <div className="text-[10px] text-slate-400 hidden lg:block">
+             Sistem Informasi Sekolah Terintegrasi (Google Form & Sheet)
+           </div>
+           <button
+             onClick={handleLogout}
+             className="flex items-center justify-center gap-1.5 px-3 py-1 bg-red-600/20 hover:bg-red-600/30 text-red-300 hover:text-red-200 text-[11px] font-bold rounded-md transition-colors border border-red-500/20 cursor-pointer"
+             title="Keluar dari Sistem"
+           >
+             <LogOut className="w-3.5 h-3.5" />
+             <span>Keluar</span>
+           </button>
+         </div>
+       </div>
 
       {/* Main Container Area */}
       <main id="main-content" className="flex-1 p-4 md:p-5 gap-4 md:gap-5 flex flex-col min-h-0 overflow-y-auto">
@@ -1656,7 +1889,7 @@ function doPost(e) {
               </div>
 
               {/* Filtering Controls */}
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                 
                 {/* Search Bar */}
                 <div className="relative">
@@ -1670,36 +1903,6 @@ function doPost(e) {
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full pl-8 pr-2.5 py-1.5 bg-white border border-slate-200 rounded text-slate-700 placeholder-slate-400 focus:outline-hidden focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-xs"
                   />
-                </div>
-
-                {/* Filter Tema / Kategori */}
-                <div className="flex items-center gap-1 bg-white border border-slate-200 rounded px-2">
-                  <Filter className="w-3 h-3 text-slate-400 shrink-0" />
-                  <select
-                    value={filterTema}
-                    onChange={(e) => setFilterTema(e.target.value)}
-                    className="w-full bg-transparent py-1.5 focus:outline-hidden text-xs text-slate-700 cursor-pointer"
-                  >
-                    <option value="Semua">Tema: Semua</option>
-                    {uniqueTemas.filter(t => t !== 'Semua').map(t => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Filter Status */}
-                <div className="flex items-center gap-1 bg-white border border-slate-200 rounded px-2">
-                  <CheckCircle className="w-3 h-3 text-slate-400 shrink-0" />
-                  <select
-                    value={filterStatus}
-                    onChange={(e) => setFilterStatus(e.target.value)}
-                    className="w-full bg-transparent py-1.5 focus:outline-hidden text-xs text-slate-700 cursor-pointer"
-                  >
-                    <option value="Semua">Status: Semua</option>
-                    {uniqueStatuses.filter(s => s !== 'Semua').map(s => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
                 </div>
 
                 {/* Filter Urgensi */}
@@ -2620,6 +2823,126 @@ function doPost(e) {
                           <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-bold">{formatToIndonesianDate(comp.tanggalDiterima)}</span>
                           <span className={`px-2 py-0.5 rounded text-[9px] font-bold border ${getUrgencyStyles(comp.urgensi)}`}>{comp.urgensi}</span>
                           <span className="text-xs font-bold text-amber-600">{comp.tema}</span>
+                        </div>
+                        <p className="text-sm font-bold text-slate-800">{comp.namaSiswa} <span className="text-slate-400 font-semibold text-xs">({comp.kelas})</span></p>
+                        <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">{comp.isi}</p>
+                        <div className="text-[10px] text-slate-400 font-medium">
+                          Pelapor: {comp.namaPelapor} • Target: <span className="font-bold text-slate-600">{cleanTargetName(comp.namaTarget || comp.target)}</span>
+                        </div>
+                      </div>
+                      <div className="flex sm:flex-col items-end justify-between sm:justify-start gap-2 shrink-0">
+                        <span className="flex items-center gap-1.5 text-xs">
+                          <span className={`w-2 h-2 rounded-full ${getStatusDot(comp.status)}`}></span>
+                          <span className="font-bold text-slate-700">{comp.status}</span>
+                        </span>
+                        {comp.pic && comp.pic !== '-' && (
+                          <span className="text-[10px] bg-blue-50 text-blue-700 font-semibold px-2 py-0.5 rounded">
+                            PIC: {comp.pic}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          </div>
+        ) : activeTab === 'analisis_pic' ? (
+          <div className="flex-1 flex flex-col lg:flex-row gap-5 min-h-0 overflow-hidden">
+            {/* Left: Diagram */}
+            <div className="flex-1 lg:max-w-md bg-white rounded-xl border border-slate-200 shadow-xs flex flex-col min-h-0 overflow-hidden">
+              <div className="p-4 border-b border-slate-100 bg-slate-50">
+                <h3 className="font-bold text-slate-800 text-xs md:text-sm flex items-center gap-2">
+                  <UserCheck className="w-4 h-4 text-cyan-600" />
+                  Grafik Keluhan per PIC Resolusi
+                </h3>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Klik pada nama PIC untuk menyaring daftar keluhan di sebelah kanan.
+                </p>
+              </div>
+              <div className="flex-1 p-4 overflow-y-auto space-y-2">
+                <button
+                  onClick={() => setSelectedAnalysisPic(null)}
+                  className={`w-full text-left p-2.5 rounded-lg text-xs font-bold transition-all border flex items-center justify-between cursor-pointer ${
+                    selectedAnalysisPic === null
+                      ? 'bg-cyan-50 border-cyan-200 text-cyan-800 shadow-xs'
+                      : 'border-slate-100 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  <span>Semua PIC</span>
+                  <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full text-[10px] font-extrabold">{complaints.length}</span>
+                </button>
+                
+                <div className="space-y-2.5 pt-2">
+                  {picAnalysisStats.map((item, idx) => {
+                    const maxCount = Math.max(...picAnalysisStats.map(c => c.count)) || 1;
+                    const barWidth = Math.max(5, (item.count / maxCount) * 100);
+                    const isSelected = selectedAnalysisPic === item.name;
+                    return (
+                      <div 
+                        key={idx}
+                        onClick={() => setSelectedAnalysisPic(item.name)}
+                        className={`p-3 rounded-lg border transition-all cursor-pointer group ${
+                          isSelected 
+                            ? 'bg-cyan-50/50 border-cyan-300 shadow-sm' 
+                            : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50/30'
+                        }`}
+                      >
+                        <div className="flex justify-between items-center text-xs font-bold mb-1.5">
+                          <span className="text-slate-700 group-hover:text-cyan-700 transition-colors">{item.name}</span>
+                          <span className="text-slate-500 font-extrabold">{item.count} Keluhan ({item.percentage}%)</span>
+                        </div>
+                        <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full rounded-full transition-all duration-500 ${
+                              isSelected ? 'bg-cyan-600' : 'bg-cyan-500 group-hover:bg-cyan-600'
+                            }`}
+                            style={{ width: `${barWidth}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Right: List */}
+            <div className="flex-1 bg-white rounded-xl border border-slate-200 shadow-xs flex flex-col min-h-0 overflow-hidden">
+              <div className="p-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-slate-800 text-xs md:text-sm flex items-center gap-2">
+                    <Database className="w-4 h-4 text-blue-600" />
+                    Daftar Keluhan PIC {selectedAnalysisPic ? `PIC: ${selectedAnalysisPic}` : '(Semua PIC)'}
+                  </h3>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Menampilkan {
+                      complaints.filter(c => !selectedAnalysisPic || (c.pic && c.pic !== '-' ? c.pic : 'Belum Ditentukan') === selectedAnalysisPic).length
+                    } keluhan.
+                  </p>
+                </div>
+                {selectedAnalysisPic && (
+                  <button 
+                    onClick={() => setSelectedAnalysisPic(null)}
+                    className="text-xs text-cyan-600 hover:text-cyan-700 font-bold bg-cyan-50 px-2.5 py-1 rounded-md transition-colors border border-cyan-200 cursor-pointer"
+                  >
+                    Reset Filter
+                  </button>
+                )}
+              </div>
+              <div className="flex-1 p-4 overflow-y-auto space-y-3">
+                {defaultSortComplaints(
+                  complaints.filter(c => !selectedAnalysisPic || (c.pic && c.pic !== '-' ? c.pic : 'Belum Ditentukan') === selectedAnalysisPic)
+                ).map((comp, idx) => (
+                    <div 
+                      key={idx}
+                      onClick={() => handleSelectComplaint(comp)}
+                      className="p-4 rounded-xl border border-slate-100 hover:border-slate-200 hover:bg-slate-50/50 transition-all cursor-pointer flex flex-col sm:flex-row sm:items-start justify-between gap-3 shadow-xs"
+                    >
+                      <div className="space-y-1.5 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-bold">{formatToIndonesianDate(comp.tanggalDiterima)}</span>
+                          <span className={`px-2 py-0.5 rounded text-[9px] font-bold border ${getUrgencyStyles(comp.urgensi)}`}>{comp.urgensi}</span>
+                          <span className="text-xs font-bold text-cyan-600">{comp.tema}</span>
                         </div>
                         <p className="text-sm font-bold text-slate-800">{comp.namaSiswa} <span className="text-slate-400 font-semibold text-xs">({comp.kelas})</span></p>
                         <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">{comp.isi}</p>
